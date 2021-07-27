@@ -28,7 +28,7 @@ import java.util.Optional;
 public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<RowData> implements Flushable {
     private static final long serialVersionUID = 1L;
 
-    public static class Builder{
+    public static class Builder {
         private static final Logger LOG = LoggerFactory.getLogger(Builder.class);
 
         private DataType[] fieldDataTypes;
@@ -74,41 +74,57 @@ public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<Ro
             }
 
             //如果是写入本地表
-            if (this.options.getWriteLocal()){
+            if (!this.options.getWriteLocal()) {
                 return createShardSinkFunction(logicalTypes, converter);
+            } else {
+                return createBatchSinkFunction(converter);
             }
-            return createBatchSinkFunction(converter);
         }
 
         /**
          * 插入集群表
+         *
          * @param converter
          * @return
          */
         private ClickHouseBatchSinkFunction createBatchSinkFunction(ClickHouseRowConverter converter) {
-            ClickHouseBatchExecutor clickHouseBatchExecutor = null;
-            if (this.primaryKey.isPresent() && !this.options.getIgnoreDelete()) {
-                ClickHouseUpsertExecutor clickHouseUpsertExecutor
-                        = ClickHouseExecutor.createUpsertExecutor(
-                                this.options.getTableName(),
-                                this.fieldNames,
-                                listToStringArray(((UniqueConstraint)this.primaryKey.get()).getColumns()),
-                                converter,
-                                this.options);
-            } else {
-                String sql = ClickHouseStatementFactory.getInsertIntoStatement(this.options.getTableName(), this.fieldNames);
-                clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql,
-                        converter,
-                        this.options.getFlushInterval(),
-                        this.options.getBatchSize(),
-                        this.options.getMaxRetries(),
-                        this.rowDataTypeInformation);
-            }
+//            ClickHouseBatchExecutor clickHouseBatchExecutor = null;
+//            if (this.primaryKey.isPresent() && !this.options.getIgnoreDelete()) {
+//                ClickHouseUpsertExecutor clickHouseUpsertExecutor
+//                        = ClickHouseExecutor.createUpsertExecutor(
+//                                this.options.getTableName(),
+//                                this.fieldNames,
+//                                listToStringArray(((UniqueConstraint)this.primaryKey.get()).getColumns()),
+//                                converter,
+//                                this.options);
+//                return new ClickHouseBatchSinkFunction(new ClickHouseConnectionProvider(this.options), clickHouseUpsertExecutor, this.options);
+//            } else {
+//                String sql = ClickHouseStatementFactory.getInsertIntoStatement(this.options.getTableName(), this.fieldNames);
+//                clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql,
+//                        converter,
+//                        this.options.getFlushInterval(),
+//                        this.options.getBatchSize(),
+//                        this.options.getMaxRetries(),
+//                        this.rowDataTypeInformation);
+//                return new ClickHouseBatchSinkFunction(new ClickHouseConnectionProvider(this.options), clickHouseBatchExecutor, this.options);
+//            }
+
+
+            String sql = ClickHouseStatementFactory.getInsertIntoStatement(this.options.getTableName(), this.fieldNames);
+            ClickHouseBatchExecutor clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql,
+                    converter,
+                    this.options.getFlushInterval(),
+                    this.options.getBatchSize(),
+                    this.options.getMaxRetries(),
+                    this.options.getIgnoreDelete(),
+                    this.rowDataTypeInformation);
             return new ClickHouseBatchSinkFunction(new ClickHouseConnectionProvider(this.options), clickHouseBatchExecutor, this.options);
+
         }
 
         /**
          * 分片插入本地表使用ClickHouseShardSinkFunction，sink.partition-strategy不能为空
+         *
          * @param logicalTypes
          * @param converter
          * @return
@@ -138,7 +154,7 @@ public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<Ro
                             .getPartitionStrategy() + "`");
             }
             if (this.primaryKey.isPresent() && !this.options.getIgnoreDelete()) {
-                keyFields = Optional.of(listToStringArray(((UniqueConstraint)this.primaryKey.get()).getColumns()));
+                keyFields = Optional.of(listToStringArray(((UniqueConstraint) this.primaryKey.get()).getColumns()));
             } else {
                 keyFields = Optional.empty();
             }

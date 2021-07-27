@@ -41,7 +41,7 @@ public class ClickHouseRowConverter implements Serializable {
 
     public RowData toFlink(ResultSet resultSet) throws SQLException {
         GenericRowData genericRowData = new GenericRowData(this.rowType.getFieldCount());
-        for(int idx = 0; idx < genericRowData.getArity(); idx++) {
+        for (int idx = 0; idx < genericRowData.getArity(); idx++) {
             Object field = resultSet.getObject(idx + 1);
             genericRowData.setField(idx, this.toFlinkConverters[idx].deserialize(field));
         }
@@ -50,9 +50,9 @@ public class ClickHouseRowConverter implements Serializable {
 
     public ClickHousePreparedStatement toClickHouse(RowData rowData, ClickHousePreparedStatement statement) throws Exception {
         //getArity Returns the number of fields in this row.
-        for(int idx = 0; idx < rowData.getArity(); idx++) {
+        for (int idx = 0; idx < rowData.getArity(); idx++) {
             //isNullAt Returns true if the field is null at the given position
-            if(rowData == null || rowData.isNullAt(idx)) {
+            if (rowData == null || rowData.isNullAt(idx)) {
                 statement.setObject(idx + 1, null);
             } else {
                 //通过函数式接口将rowdata转换为ck statement
@@ -66,7 +66,7 @@ public class ClickHouseRowConverter implements Serializable {
         int timestampPrecision;
         int decimalPrecision;
         int decimalScale;
-        switch(type.getTypeRoot()) {
+        switch (type.getTypeRoot()) {
             case BOOLEAN:
                 return (val, index, statement) -> statement.setBoolean(index + 1, val.getBoolean(index));
             case TINYINT:
@@ -92,11 +92,11 @@ public class ClickHouseRowConverter implements Serializable {
                 return (val, index, statement) -> statement.setTime(index + 1, Time.valueOf(LocalTime.ofNanoOfDay(val.getInt(index) * 1000000L)));
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                timestampPrecision = ((TimestampType)type).getPrecision();
+                timestampPrecision = ((TimestampType) type).getPrecision();
                 return (val, index, statement) -> statement.setTimestamp(index + 1, val.getTimestamp(index, timestampPrecision).toTimestamp());
             case DECIMAL:
-                decimalPrecision = ((DecimalType)type).getPrecision();
-                decimalScale = ((DecimalType)type).getScale();
+                decimalPrecision = ((DecimalType) type).getPrecision();
+                decimalScale = ((DecimalType) type).getScale();
                 return (val, index, statement) -> statement.setBigDecimal(index + 1, val.getDecimal(index, decimalPrecision, decimalScale).toBigDecimal());
         }
         throw new UnsupportedOperationException("Unsupported type:" + type);
@@ -115,36 +115,36 @@ public class ClickHouseRowConverter implements Serializable {
             case INTERVAL_DAY_TIME:
                 return val -> val;
             case TINYINT:
-                return val -> Byte.valueOf(((Integer)val).byteValue());
+                return val -> Byte.valueOf(((Integer) val).byteValue());
             case SMALLINT:
-                return val -> (val instanceof Integer) ? Short.valueOf(((Integer)val).shortValue()):val;
+                return val -> (val instanceof Integer) ? Short.valueOf(((Integer) val).shortValue()) : val;
             case INTEGER:
                 return val -> val;
             case BIGINT:
                 return val -> val;
             case DECIMAL:
-                precision = ((DecimalType)type).getPrecision();
-                scale = ((DecimalType)type).getScale();
-                return val -> (val instanceof BigInteger) ? DecimalData.fromBigDecimal(new BigDecimal((BigInteger)val, 0), precision, scale) : DecimalData.fromBigDecimal((BigDecimal)val, precision, scale);
+                precision = ((DecimalType) type).getPrecision();
+                scale = ((DecimalType) type).getScale();
+                return val -> (val instanceof BigInteger) ? DecimalData.fromBigDecimal(new BigDecimal((BigInteger) val, 0), precision, scale) : DecimalData.fromBigDecimal((BigDecimal) val, precision, scale);
             case DATE:
-                return val -> Integer.valueOf((int)((Date)val).toLocalDate().toEpochDay());
+                return val -> Integer.valueOf((int) ((Date) val).toLocalDate().toEpochDay());
             case TIME_WITHOUT_TIME_ZONE:
-                return val -> Integer.valueOf((int)(((Time)val).toLocalTime().toNanoOfDay() / 1000000L));
+                return val -> Integer.valueOf((int) (((Time) val).toLocalTime().toNanoOfDay() / 1000000L));
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
                 return val -> TimestampData.fromTimestamp((Timestamp) val);
             case CHAR:
             case VARCHAR:
-                return val -> StringData.fromString((String)val);
+                return val -> StringData.fromString((String) val);
             case BINARY:
             case VARBINARY:
-                return val -> (byte[])val;
+                return val -> (byte[]) val;
         }
         throw new UnsupportedOperationException("Unsupported type:" + type);
     }
 
     @FunctionalInterface
-    static interface SerializationConverter extends Serializable{
+    static interface SerializationConverter extends Serializable {
         void serialize(RowData param1RowData, int param1Int, PreparedStatement param1PreparedStatement) throws SQLException;
     }
 

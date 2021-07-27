@@ -120,9 +120,9 @@ public class ClickHouseDynamicTableFactory implements DynamicTableSinkFactory {
         return optionalOptions;
     }
 
-    private void validateConfigOptions(ReadableConfig config) throws Exception{
-        String partitionStrategy = (String)config.get(SINK_PARTITION_STRATEGY);
-        if (!Arrays.asList(new String[] { "hash", "balanced", "shuffle" }).contains(partitionStrategy))
+    private void validateConfigOptions(ReadableConfig config) throws Exception {
+        String partitionStrategy = (String) config.get(SINK_PARTITION_STRATEGY);
+        if (!Arrays.asList(new String[]{"hash", "balanced", "shuffle"}).contains(partitionStrategy))
             throw new IllegalArgumentException("Unknown sink.partition-strategy `" + partitionStrategy + "`");
         if (partitionStrategy.equals("hash") && !config.getOptional(SINK_PARTITION_KEY).isPresent())
             throw new IllegalArgumentException("A partition key must be provided for hash partition strategy");
@@ -131,18 +131,18 @@ public class ClickHouseDynamicTableFactory implements DynamicTableSinkFactory {
     }
 
     private ClickHouseOptions getOptions(ReadableConfig config) {
-        return (new ClickHouseOptions.Builder()).withUrl((String)config.get(URL))
-                .withUsername((String)config.get(USERNAME))
-                .withPassword((String)config.get(PASSWORD))
-                .withDatabaseName((String)config.get(DATABASE_NAME))
-                .withTableName((String)config.get(TABLE_NAME))
-                .withBatchSize(((Integer)config.get(SINK_BATCH_SIZE)).intValue())
-                .withFlushInterval((Duration)config.get(SINK_FLUSH_INTERVAL))
-                .withMaxRetries(((Integer)config.get(SINK_MAX_RETRIES)).intValue())
-                .withWriteLocal((Boolean)config.get(SINK_WRITE_LOCAL))
-                .withPartitionStrategy((String)config.get(SINK_PARTITION_STRATEGY))
-                .withPartitionKey((String)config.get(SINK_PARTITION_KEY))
-                .withIgnoreDelete(((Boolean)config.get(SINK_IGNORE_DELETE)).booleanValue())
+        return (new ClickHouseOptions.Builder()).withUrl((String) config.get(URL))
+                .withUsername((String) config.get(USERNAME))
+                .withPassword((String) config.get(PASSWORD))
+                .withDatabaseName((String) config.get(DATABASE_NAME))
+                .withTableName((String) config.get(TABLE_NAME))
+                .withBatchSize(((Integer) config.get(SINK_BATCH_SIZE)).intValue())
+                .withFlushInterval((Duration) config.get(SINK_FLUSH_INTERVAL))
+                .withMaxRetries(((Integer) config.get(SINK_MAX_RETRIES)).intValue())
+                .withWriteLocal((Boolean) config.get(SINK_WRITE_LOCAL))
+                .withPartitionStrategy((String) config.get(SINK_PARTITION_STRATEGY))
+                .withPartitionKey((String) config.get(SINK_PARTITION_KEY))
+                .withIgnoreDelete(((Boolean) config.get(SINK_IGNORE_DELETE)).booleanValue())
                 .build();
     }
 }

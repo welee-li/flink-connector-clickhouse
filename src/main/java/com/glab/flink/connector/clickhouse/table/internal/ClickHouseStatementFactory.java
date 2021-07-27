@@ -15,7 +15,7 @@ public class ClickHouseStatementFactory {
         String setClause = Arrays.stream(fieldNames).map(f -> quoteIdentifier(f) + "= ?").collect(Collectors.joining(", "));
         String conditionClause = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "= ?").collect(Collectors.joining(" AND "));
         String onClusterClause = "";
-        if(clusterName.isPresent()) {
+        if (clusterName.isPresent()) {
             onClusterClause = " ON CLAUSTER " + quoteIdentifier(clusterName.get());
         }
 

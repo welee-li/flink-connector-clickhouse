@@ -13,22 +13,22 @@ import ru.yandex.clickhouse.ClickHouseConnection;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 
-public class ClickHouseBatchSinkFunction extends AbstractClickHouseSinkFunction{
+public class ClickHouseBatchSinkFunction extends AbstractClickHouseSinkFunction {
     private static final long serialVersionUID = 1L;
 
     private static final Logger LOG = LoggerFactory.getLogger(ClickHouseBatchSinkFunction.class);
 
     private final ClickHouseConnectionProvider connectionProvider;
 
-    private transient ClickHouseConnection connection;
+    private ClickHouseConnection connection;
 
     private final ClickHouseExecutor executor;
 
     private final ClickHouseOptions options;
 
-    private transient boolean closed = false;
+    private boolean closed = false;
 
-    private transient int batchCount = 0;
+    private int batchCount = 0;
 
     public ClickHouseBatchSinkFunction(@Nonnull ClickHouseConnectionProvider connectionProvider,
                                        @Nonnull ClickHouseExecutor executor,
@@ -41,20 +41,22 @@ public class ClickHouseBatchSinkFunction extends AbstractClickHouseSinkFunction{
     @Override
     public void open(Configuration parameters) throws IOException {
         try {
-           this.connection = this.connectionProvider.getConnection();
-           this.executor.prepareStatement(this.connectionProvider);
-           this.executor.setRuntimeContext(getRuntimeContext());
-        }catch (Exception e) {
+            this.connection = this.connectionProvider.getConnection();
+            this.executor.prepareStatement(this.connectionProvider);
+            this.executor.setRuntimeContext(getRuntimeContext());
+        } catch (Exception e) {
             throw new IOException("unable to establish connection with ClickHouse", e);
         }
     }
 
     @Override
-    public void invoke(RowData rowData, Context context) throws IOException{
+    public void invoke(RowData rowData, Context context) throws IOException {
         this.executor.addBatch(rowData);
+
         this.batchCount++;
-        if(this.batchCount >= this.options.getBatchSize()) {
+        if (this.batchCount >= this.options.getBatchSize()) {
             flush();
+            this.batchCount = 0;
         }
     }
 
@@ -65,7 +67,7 @@ public class ClickHouseBatchSinkFunction extends AbstractClickHouseSinkFunction{
 
     @Override
     public void close() {
-        if(!this.closed) {
+        if (!this.closed) {
             this.closed = true;
             try {
                 flush();
@@ -77,12 +79,12 @@ public class ClickHouseBatchSinkFunction extends AbstractClickHouseSinkFunction{
         }
     }
 
-    private void closeConnection(){
-        if(this.connection != null) {
+    private void closeConnection() {
+        if (this.connection != null) {
             try {
                 this.executor.closeStatement();
                 this.connectionProvider.closeConnection();
-            }catch (Exception e) {
+            } catch (Exception e) {
                 LOG.warn("ClickHouse connection could not be closed: {}", e.getMessage());
             } finally {
                 this.connection = null;

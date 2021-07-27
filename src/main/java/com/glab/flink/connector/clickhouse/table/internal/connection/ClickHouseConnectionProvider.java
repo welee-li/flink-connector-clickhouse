@@ -38,9 +38,9 @@ public class ClickHouseConnectionProvider implements Serializable {
             "([?][a-zA-Z0-9_]+[=][a-zA-Z0-9_]+([&][a-zA-Z0-9_]+[=][a-zA-Z0-9_]+)*)?" +
             ")?");
 
-    private transient ClickHouseConnection connection;
+    private ClickHouseConnection connection;
 
-    private transient List<ClickHouseConnection> shardConnections;
+    private List<ClickHouseConnection> shardConnections;
 
     private final ClickHouseOptions options;
 
@@ -49,7 +49,7 @@ public class ClickHouseConnectionProvider implements Serializable {
     }
 
     public synchronized ClickHouseConnection getConnection() throws SQLException {
-        if(this.connection == null) {
+        if (this.connection == null) {
             this.connection = createConnection(this.options.getUrl(), this.options.getDatabaseName());
         }
         return this.connection;
@@ -57,6 +57,7 @@ public class ClickHouseConnectionProvider implements Serializable {
 
     /**
      * 暂支持单个url例如：clickhouse://192.168.8.94:8123，后续根据需求支持多个clickhouse://192.168.8.94:8123；192.168.8.95:8123
+     *
      * @param url
      * @param dbName
      * @return
@@ -74,7 +75,7 @@ public class ClickHouseConnectionProvider implements Serializable {
             throw new SQLException(e);
         }
 
-        if(options.getUsername().isPresent()) {
+        if (options.getUsername().isPresent()) {
             conn = (ClickHouseConnection) DriverManager.getConnection(getJdbcUrl(url, dbName),
                     options.getUsername().orElse(null), options.getPassword().orElse(null));
         } else {
@@ -87,7 +88,7 @@ public class ClickHouseConnectionProvider implements Serializable {
     //多个url拆分
     private String parseUrl(String urls) {
         Matcher matcher = URL_TEMPLATE.matcher(urls);
-        if(!matcher.matches()) {
+        if (!matcher.matches()) {
             throw new IllegalArgumentException("Incorrect url!");
         }
         return "";
@@ -95,21 +96,22 @@ public class ClickHouseConnectionProvider implements Serializable {
 
     /**
      * 如果采用的是插入单机表模式，分别获取每台机器的jdbc连接
+     *
      * @param remoteCluster
      * @param remoteDataBase
      * @return
      * @throws SQLException
      */
-    public synchronized List<ClickHouseConnection> getShardConnections(String remoteCluster, String remoteDataBase) throws SQLException{
-        if(this.shardConnections == null) {
+    public synchronized List<ClickHouseConnection> getShardConnections(String remoteCluster, String remoteDataBase) throws SQLException {
+        if (this.shardConnections == null) {
             ClickHouseConnection conn = getConnection();
             String shardSql = String.format("SELECT shard_num, host_address, port FROM system.clusters WHERE cluster = '%s'", remoteCluster);
             //查询ck集群各个分片信息
             PreparedStatement stmt = conn.prepareStatement(shardSql);
 
-            try (ResultSet resultSet = stmt.executeQuery()){
+            try (ResultSet resultSet = stmt.executeQuery()) {
                 this.shardConnections = new ArrayList<>();
-                while(resultSet.next()) {
+                while (resultSet.next()) {
                     String host_address = resultSet.getString("host_address");
                     int port = getActualHttpPort(host_address, resultSet.getInt("port"));
                     String url = "clickhouse://" + host_address + ":" + port;
@@ -119,7 +121,7 @@ public class ClickHouseConnectionProvider implements Serializable {
                 e.printStackTrace();
             }
 
-            if(this.shardConnections.isEmpty()) {
+            if (this.shardConnections.isEmpty()) {
                 throw new SQLException("unable to query shards in system.clusters");
             }
         }
@@ -127,39 +129,39 @@ public class ClickHouseConnectionProvider implements Serializable {
         return this.shardConnections;
     }
 
-    private int getActualHttpPort(String host_address, int port) throws Exception{
-        try(CloseableHttpClient httpClient = HttpClients.createDefault()) {
+    private int getActualHttpPort(String host_address, int port) throws Exception {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet request = new HttpGet((new URIBuilder()).setScheme("http").setHost(host_address).setPort(port).build());
             CloseableHttpResponse closeableHttpResponse = httpClient.execute((HttpUriRequest) request);
             int statusCode = closeableHttpResponse.getStatusLine().getStatusCode();
-            if(statusCode == 200) {
+            if (statusCode == 200) {
                 return port;
             }
 
             String raw = EntityUtils.toString(closeableHttpResponse.getEntity());
             Matcher matcher = PATTERN.matcher(raw);
-            if(matcher.find()) {
+            if (matcher.find()) {
                 return Integer.parseInt(matcher.group("port"));
             }
             throw new SQLException("Cannot query ClickHouse http port");
         } catch (Exception e) {
-          throw new SQLException("Cannot connect to ClickHouse server using HTTP", e);
+            throw new SQLException("Cannot connect to ClickHouse server using HTTP", e);
         }
     }
 
-    private String getJdbcUrl(String url, String dbName) throws SQLException{
+    private String getJdbcUrl(String url, String dbName) throws SQLException {
         try {
             return "jdbc:" + (new URIBuilder(url)).setPath("/" + dbName).build().toString();
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new SQLException(e);
         }
     }
 
-    public void closeConnection() throws SQLException{
-        if(this.connection != null) {
+    public void closeConnection() throws SQLException {
+        if (this.connection != null) {
             this.connection.close();
         }
-        if(this.shardConnections != null) {
+        if (this.shardConnections != null) {
             for (ClickHouseConnection shardConnection : shardConnections) {
                 shardConnection.close();
             }
@@ -168,6 +170,7 @@ public class ClickHouseConnectionProvider implements Serializable {
 
     /**
      * 根据WITH中传入的distributed表名称获取单机表名称相关信息
+     *
      * @param databaseName
      * @param tableName
      * @return

@@ -25,7 +25,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction{
+public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction {
     private static final long serialVersionUID = 1L;
 
     private static final Logger LOG = LoggerFactory.getLogger(ClickHouseShardSinkFunction.class);
@@ -42,15 +42,15 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction{
 
     private final String[] fieldNames;
 
-    private transient boolean closed = false;
+    private boolean closed = false;
 
-    private transient ClickHouseConnection connection;
+    private ClickHouseConnection connection;
 
     private String remoteTable;
 
-    private transient List<ClickHouseConnection> shardConnections;
+    private List<ClickHouseConnection> shardConnections;
 
-    private transient int[] batchCounts;
+    private int[] batchCounts;
 
     private final List<ClickHouseExecutor> shardExecutors;
 
@@ -114,7 +114,7 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction{
             if (this.keyFields.length > 0) {
                 ClickHouseUpsertExecutor clickHouseUpsertExecutor = ClickHouseExecutor.createUpsertExecutor(this.remoteTable, this.fieldNames, this.keyFields, this.converter, this.options);
             } else {
-                clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql, this.converter, this.options.getFlushInterval(), this.options.getBatchSize(), this.options.getMaxRetries(), null);
+                clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql, this.converter, this.options.getFlushInterval(), this.options.getBatchSize(), this.options.getMaxRetries(), this.ignoreDelete, null);
             }
             clickHouseBatchExecutor.prepareStatement(this.shardConnections.get(i));
             this.shardExecutors.add(clickHouseBatchExecutor);
@@ -142,14 +142,14 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction{
                 return;
         }
         throw new UnsupportedOperationException(
-                String.format("Unknown row kind, the supported row kinds is: INSERT, UPDATE_BEFORE, UPDATE_AFTER, DELETE, but get: %s.", new Object[] { record.getRowKind() }));
+                String.format("Unknown row kind, the supported row kinds is: INSERT, UPDATE_BEFORE, UPDATE_AFTER, DELETE, but get: %s.", new Object[]{record.getRowKind()}));
     }
 
     private void writeRecordToOneExecutor(RowData record) throws IOException {
         int selected = this.partitioner.select(record, this.shardExecutors.size());
         this.shardExecutors.get(selected).addBatch(record);
         this.batchCounts[selected] = this.batchCounts[selected] + 1;
-        if (this.batchCounts[selected] >= this.options.getBatchSize()){
+        if (this.batchCounts[selected] >= this.options.getBatchSize()) {
             flush(selected);
         }
     }
@@ -191,7 +191,7 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction{
     private void closeConnection() {
         if (this.connection != null)
             try {
-                for (int i = 0; i < this.shardExecutors.size(); i++){
+                for (int i = 0; i < this.shardExecutors.size(); i++) {
                     this.shardExecutors.get(i).closeStatement();
                 }
                 this.connectionProvider.closeConnection();
