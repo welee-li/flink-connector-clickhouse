@@ -61,6 +61,7 @@ add by welee.li
 1.配置'sink.ignore-delete' = 'true'时，忽略 DELETE 并视 UPDATE 为 INSERT，与原connector功能一致
 
 2.配置'sink.ignore-delete'='false'时, 对delete的数据增加删除标识并insert到clickhouse中
+
     实现原理：clickhouse使用 "Engine= ReplacingMergeTree(version) order by pk_id" 表，并在最后两个字段使用sign(数据是否有效标识,1有效,-1无效),version(数据版本号,默认使用插入时间戳)
     1)数据新增：插入sign=1,version=UNIX_TIMESTAMP()数据
     2)数据修改：插入sign=1,version=UNIX_TIMESTAMP()数据
