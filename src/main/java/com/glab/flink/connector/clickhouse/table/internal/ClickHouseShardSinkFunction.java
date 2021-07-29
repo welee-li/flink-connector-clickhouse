@@ -4,7 +4,7 @@ import com.glab.flink.connector.clickhouse.table.internal.connection.ClickHouseC
 import com.glab.flink.connector.clickhouse.table.internal.converter.ClickHouseRowConverter;
 import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseBatchExecutor;
 import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseExecutor;
-import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseUpsertExecutor;
+//import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseUpsertExecutor;
 import com.glab.flink.connector.clickhouse.table.internal.options.ClickHouseOptions;
 import com.glab.flink.connector.clickhouse.table.internal.partitioner.ClickHousePartitioner;
 import org.apache.flink.configuration.Configuration;
@@ -30,7 +30,7 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction 
 
     private static final Logger LOG = LoggerFactory.getLogger(ClickHouseShardSinkFunction.class);
 
-    private static final Pattern PATTERN = Pattern.compile("Distributed\\((?<cluster>[a-zA-Z_][0-9a-zA-Z_]*),\\s*(?<database>[a-zA-Z_][0-9a-zA-Z_]*),\\s*(?<table>[a-zA-Z_][0-9a-zA-Z_]*)");
+    private static final Pattern PATTERN = Pattern.compile("Distributed\\('(?<cluster>[a-zA-Z_][0-9a-zA-Z_]*)',\\s*'(?<database>[a-zA-Z_][0-9a-zA-Z_]*)',\\s*'(?<table>[a-zA-Z_][0-9a-zA-Z_]*)'");
 
     private final ClickHouseConnectionProvider connectionProvider;
 
@@ -54,13 +54,12 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction 
 
     private final List<ClickHouseExecutor> shardExecutors;
 
-    private final String[] keyFields;
+//    private final String[] keyFields;
 
     private final boolean ignoreDelete;
 
     protected ClickHouseShardSinkFunction(@Nonnull ClickHouseConnectionProvider connectionProvider,
                                           @Nonnull String[] fieldNames,
-                                          @Nonnull Optional<String[]> keyFields,
                                           @Nonnull ClickHouseRowConverter converter,
                                           @Nonnull ClickHousePartitioner partitioner,
                                           @Nonnull ClickHouseOptions options) {
@@ -71,11 +70,11 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction 
         this.options = Preconditions.checkNotNull(options);
         this.shardExecutors = new ArrayList<>();
         this.ignoreDelete = options.getIgnoreDelete();
-        if (keyFields.isPresent()) {
-            this.keyFields = keyFields.get();
-        } else {
-            this.keyFields = new String[0];
-        }
+//        if (keyFields.isPresent()) {
+//            this.keyFields = keyFields.get();
+//        } else {
+//            this.keyFields = new String[0];
+//        }
     }
 
     @Override
@@ -111,11 +110,12 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction 
         String sql = ClickHouseStatementFactory.getInsertIntoStatement(this.remoteTable, this.fieldNames);
         for (int i = 0; i < this.shardConnections.size(); i++) {
             ClickHouseBatchExecutor clickHouseBatchExecutor = null;
-            if (this.keyFields.length > 0) {
-                ClickHouseUpsertExecutor clickHouseUpsertExecutor = ClickHouseExecutor.createUpsertExecutor(this.remoteTable, this.fieldNames, this.keyFields, this.converter, this.options);
-            } else {
-                clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql, this.converter, this.options.getFlushInterval(), this.options.getBatchSize(), this.options.getMaxRetries(), this.ignoreDelete, null);
-            }
+//            if (this.keyFields.length > 0) {
+//                ClickHouseUpsertExecutor clickHouseUpsertExecutor = ClickHouseExecutor.createUpsertExecutor(this.remoteTable, this.fieldNames, this.keyFields, this.converter, this.options);
+//            } else {
+//                clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql, this.converter, this.options.getFlushInterval(), this.options.getBatchSize(), this.options.getMaxRetries(), this.ignoreDelete, null);
+//            }
+            clickHouseBatchExecutor = new ClickHouseBatchExecutor(sql, this.converter, this.options.getFlushInterval(), this.options.getBatchSize(), this.options.getMaxRetries(), this.ignoreDelete, null);
             clickHouseBatchExecutor.prepareStatement(this.shardConnections.get(i));
             this.shardExecutors.add(clickHouseBatchExecutor);
         }
@@ -128,15 +128,18 @@ public class ClickHouseShardSinkFunction extends AbstractClickHouseSinkFunction 
                 writeRecordToOneExecutor(record);
                 return;
             case UPDATE_AFTER:
-                if (this.ignoreDelete) {
-                    writeRecordToOneExecutor(record);
-                } else {
-                    writeRecordToAllExecutors(record);
-                }
+
+//                if (this.ignoreDelete) {
+//                    writeRecordToOneExecutor(record);
+//                } else {
+//                    writeRecordToAllExecutors(record);
+//                }
+                writeRecordToOneExecutor(record);
                 return;
             case DELETE:
-                if (!this.ignoreDelete)
-                    writeRecordToAllExecutors(record);
+//                if (!this.ignoreDelete)
+//                    writeRecordToAllExecutors(record);
+                writeRecordToOneExecutor(record);
                 return;
             case UPDATE_BEFORE:
                 return;

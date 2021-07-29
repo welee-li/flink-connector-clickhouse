@@ -56,13 +56,13 @@ public class ClickHouseBatchSinkFunction extends AbstractClickHouseSinkFunction 
         this.batchCount++;
         if (this.batchCount >= this.options.getBatchSize()) {
             flush();
-            this.batchCount = 0;
         }
     }
 
     @Override
     public void flush() throws IOException {
         this.executor.executeBatch();
+        this.batchCount = 0;
     }
 
     @Override

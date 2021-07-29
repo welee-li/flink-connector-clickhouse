@@ -3,12 +3,9 @@ package com.glab.flink.connector.clickhouse.table.internal;
 import com.glab.flink.connector.clickhouse.table.internal.connection.ClickHouseConnectionProvider;
 import com.glab.flink.connector.clickhouse.table.internal.converter.ClickHouseRowConverter;
 import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseBatchExecutor;
-import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseExecutor;
-import com.glab.flink.connector.clickhouse.table.internal.executor.ClickHouseUpsertExecutor;
 import com.glab.flink.connector.clickhouse.table.internal.options.ClickHouseOptions;
 import com.glab.flink.connector.clickhouse.table.internal.partitioner.ClickHousePartitioner;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.table.api.constraints.UniqueConstraint;
 import org.apache.flink.table.data.RowData;
@@ -34,7 +31,8 @@ public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<Ro
         private DataType[] fieldDataTypes;
         private ClickHouseOptions options;
         private String[] fieldNames;
-        private Optional<UniqueConstraint> primaryKey;
+        //全部使用插入模式，不再需要主键
+        //private Optional<UniqueConstraint> primaryKey;
         private TypeInformation<RowData> rowDataTypeInformation;
 
         public Builder withOptions(ClickHouseOptions options) {
@@ -57,10 +55,10 @@ public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<Ro
             return this;
         }
 
-        public Builder withPrimaryKey(Optional<UniqueConstraint> primaryKey) {
-            this.primaryKey = primaryKey;
-            return this;
-        }
+//        public Builder withPrimaryKey(Optional<UniqueConstraint> primaryKey) {
+//            this.primaryKey = primaryKey;
+//            return this;
+//        }
 
         public AbstractClickHouseSinkFunction build() {
             Preconditions.checkNotNull(this.options);
@@ -68,15 +66,17 @@ public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<Ro
             Preconditions.checkNotNull(this.fieldDataTypes);
             LogicalType[] logicalTypes = Arrays.stream(this.fieldDataTypes).map(DataType::getLogicalType).toArray(a -> new LogicalType[a]);
             ClickHouseRowConverter converter = new ClickHouseRowConverter(RowType.of(logicalTypes));
-            if (this.primaryKey.isPresent()) {
-                LOG.warn("If primary key is specified, connector will be in UPSERT mode.");
-                LOG.warn("You will have significant performance loss.");
-            }
+//            if (this.primaryKey.isPresent()) {
+//                LOG.warn("If primary key is specified, connector will be in UPSERT mode.");
+//                LOG.warn("You will have significant performance loss.");
+//            }
 
             //如果是写入本地表
-            if (!this.options.getWriteLocal()) {
+            if (this.options.getWriteLocal()) {
+                LOG.warn("flink-clickhouse-connector:AbstractClickHouseSinkFunction:使用ShardSinkFunction写入分布式表的本地表,partitionKey:" + this.options.getPartitionKey() + ",partitionStrategy:" + this.options.getPartitionStrategy());
                 return createShardSinkFunction(logicalTypes, converter);
             } else {
+                LOG.warn("flink-clickhouse-connector:AbstractClickHouseSinkFunction:使用BatchSinkFunction本地表或分布式表,但写写入分布式表时分布式表建表语句需要指定shardKey");
                 return createBatchSinkFunction(converter);
             }
         }
@@ -153,12 +153,13 @@ public abstract class AbstractClickHouseSinkFunction extends RichSinkFunction<Ro
                     throw new IllegalArgumentException("Unknown sink.partition-strategy `" + this.options
                             .getPartitionStrategy() + "`");
             }
-            if (this.primaryKey.isPresent() && !this.options.getIgnoreDelete()) {
-                keyFields = Optional.of(listToStringArray(((UniqueConstraint) this.primaryKey.get()).getColumns()));
-            } else {
-                keyFields = Optional.empty();
-            }
-            return new ClickHouseShardSinkFunction(new ClickHouseConnectionProvider(this.options), this.fieldNames, keyFields, converter, partitioner, this.options);
+
+//            if (this.primaryKey.isPresent() && !this.options.getIgnoreDelete()) {
+//                keyFields = Optional.of(listToStringArray(((UniqueConstraint) this.primaryKey.get()).getColumns()));
+//            } else {
+//                keyFields = Optional.empty();
+//            }
+            return new ClickHouseShardSinkFunction(new ClickHouseConnectionProvider(this.options), this.fieldNames, converter, partitioner, this.options);
         }
 
         private String[] listToStringArray(List<String> lists) {

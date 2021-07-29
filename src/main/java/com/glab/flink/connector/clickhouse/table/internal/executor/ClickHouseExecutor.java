@@ -28,15 +28,15 @@ public interface ClickHouseExecutor extends Serializable {
 
     String getState();
 
-    static ClickHouseUpsertExecutor createUpsertExecutor(String tableName,
-                                                         String[] fieldNames,
-                                                         String[] keyFields,
-                                                         ClickHouseRowConverter converter,
-                                                         ClickHouseOptions options) {
-        String insertSql = ClickHouseStatementFactory.getInsertIntoStatement(tableName, fieldNames);
-        String updateSql = ClickHouseStatementFactory.getUpdateStatement(tableName, fieldNames, keyFields,
-                Optional.empty());
-        String deleteSql = ClickHouseStatementFactory.getDeleteStatement(tableName, keyFields, Optional.empty());
-        return new ClickHouseUpsertExecutor(insertSql, updateSql, deleteSql, converter, options);
-    }
+//    static ClickHouseUpsertExecutor createUpsertExecutor(String tableName,
+//                                                         String[] fieldNames,
+//                                                         String[] keyFields,
+//                                                         ClickHouseRowConverter converter,
+//                                                         ClickHouseOptions options) {
+//        String insertSql = ClickHouseStatementFactory.getInsertIntoStatement(tableName, fieldNames);
+//        String updateSql = ClickHouseStatementFactory.getUpdateStatement(tableName, fieldNames, keyFields,
+//                Optional.empty());
+//        String deleteSql = ClickHouseStatementFactory.getDeleteStatement(tableName, keyFields, Optional.empty());
+//        return new ClickHouseUpsertExecutor(insertSql, updateSql, deleteSql, converter, options);
+//    }
 }

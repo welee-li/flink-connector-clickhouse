@@ -21,7 +21,8 @@ public class ClickHouseDynamicTableSink implements DynamicTableSink {
 
     @Override
     public ChangelogMode getChangelogMode(ChangelogMode requestedMode) {
-        validatePrimaryKey(requestedMode);
+        // 不需要验证创建表时是否设置了主键，因为全部都是插入，不需要更新
+        // validatePrimaryKey(requestedMode);
         return ChangelogMode.newBuilder()
                 .addContainedKind(RowKind.INSERT)
                 .addContainedKind(RowKind.UPDATE_AFTER)
@@ -40,7 +41,7 @@ public class ClickHouseDynamicTableSink implements DynamicTableSink {
                         .withOptions(this.options)
                         .withFieldNames(this.tableSchema.getFieldNames())
                         .withFieldDataTypes(this.tableSchema.getFieldDataTypes())
-                        .withPrimaryKey(this.tableSchema.getPrimaryKey())
+                        //.withPrimaryKey(this.tableSchema.getPrimaryKey())
                         .withRowDataTypeInfo(context.createTypeInformation(this.tableSchema.toRowDataType()))
                         .build();
         return SinkFunctionProvider.of(sinkFunction);
